@@ -1,151 +1,146 @@
 import streamlit as st
 import pandas as pd
-import math
-from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+# Load data
+df = pd.read_csv("/workspaces/Nabila-Projek/data_siap (1).csv")
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# membuat bar navigasi
+nav_options = ["beranda","Bulan", "Weathersit", "Tambahan"]
+nav_choice = st.sidebar.selectbox("Pilih Analisis", nav_options)
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+#membuat halaman beranda
+if nav_choice == "beranda":
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
-
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
-
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
+                st.title("Analisis Data Pengguna Sepeda")
+                st.write("Selamat datang di analisis data pengguna sepeda!")
+                st.write("Pilih jenis data analisis yang anda inginkan .")
+                st.image("naik_sepeda.jpg", use_column_width=True)  
+                st.header("Pencarian Data jumlah pelanggan")
+                st.header("Filter Data yang diinginkan")
+                bulan_filter = st.selectbox("Pilih Bulan", df["mnth"].unique())
+                tahun_filter = st.selectbox("Pilih Tahun", df["yr"].unique())
+                cuaca_filter = st.selectbox("Pilih Cuaca", df["weathersit"].unique())
+                df_filtered = df[(df["mnth"] == bulan_filter) & (df["yr"] == tahun_filter) & (df["weathersit"] == cuaca_filter)]
+                st.write("jumlahData yang sesuai:")
+                sum_cnt = df_filtered["cnt"].sum()
+                sum_casual = df_filtered["casual"].sum()
+                sum_registered = df_filtered["registered"].sum()
+                st.write("Data yang difilter:")
+                st.write(df_filtered[["cnt", "casual", "registered"]])
+                st.write("Total Penyewa:", sum_cnt)
+                st.write("Total Casual:", sum_casual)
+                st.write("Total Registered:", sum_registered)
 
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+        
 
-st.header(f'GDP in {to_year}', divider='gray')
+elif nav_choice == "Bulan":
+            # Membuat kolom baru untuk tanggal
+            df['dteday'] = pd.to_datetime(df['dteday'])
+            df['weekday'] = df['dteday'].dt.day_name()
+            df['mnth'] = df['dteday'].dt.month_name()
+            df['yr'] = df['dteday'].dt.year
 
-''
+            # Membuat dashboard
+            st.title("Analisis Data Pengguna Sepeda")
+            st.write (df)
 
-cols = st.columns(4)
+            # Pertanyaan 1: Bagaimana performa pengguna jasa sewa sepeda tiap bulannya?
+            plt.style.use('dark_background')
+            st.header("Performa Pengguna Jasa Sewa Sepeda Tiap Bulannya")
+            st.write("Grafik persewaan sepeda tiap bulannya pada tahun 2011-2012")
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.lineplot(x="dteday", y="cnt", data=df, color='blue')
+            ax.set_xlabel("Tanggal")
+            ax.set_ylabel("Total Penyewa")
+            ax.set_title("Grafik Persewaan Sepeda Tiap Bulannya pada Tahun 2011-2012")
+            ax.set_facecolor('black')  
+            ax.grid(color='white')  
+            ax.tick_params(axis='x', colors='white')  
+            ax.tick_params(axis='y', colors='red')  
+            ax.spines['bottom'].set_color('yellow') 
+            ax.spines['top'].set_color('white') 
+            ax.spines['right'].set_color('yellow') 
+            ax.spines['left'].set_color('yellow')
+            st.pyplot(fig)
 
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
 
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
+            # Tabel data bulan
+            mean_df = df.groupby(by="mnth").agg({
+                "mnth": "nunique",
+                "cnt": ["mean", "std", "max", "min"]
+            })
+            mean_df = mean_df.reset_index()
+            mean_df.columns = ["_".join(col) for col in mean_df.columns.values]
 
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
+            # Grafik rata-rata pengguna sepeda tiap bulannya
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.lineplot(x=mean_df.index, y=mean_df["cnt_mean"], color='blue')
+            sns.lineplot(x=mean_df.index, y=mean_df["cnt_std"], color='red')
+            sns.lineplot(x=mean_df.index, y=mean_df["cnt_max"], color='green')
+            sns.lineplot(x=mean_df.index, y=mean_df["cnt_min"], color='yellow')
+            ax.set_xlabel("Bulan")
+            ax.set_ylabel("Total Penyewa")
+            ax.set_title("Grafik Rata-Rata Pengguna Sepeda Tiap Bulannya")
+            st.pyplot(fig)
 
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+
+
+            # Data urut terbanyak penyewa berdasarkan bulan
+            st.write("Data Urut Terbanyak Penyewa Berdasarkan Bulan")
+            st.write(df.groupby(by="mnth").nunique().sort_values(by='cnt', ascending=False))
+
+            # Data urut terkecil penyewa berdasarkan bulan
+            st.write("Data Urut Terkecil Penyewa Berdasarkan Bulan")
+            st.write(df.groupby(by="mnth").nunique().sort_values(by='cnt', ascending=True))
+
+elif nav_choice == "Weathersit":
+            # Pertanyaan 2: Bagaimana cuaca mempengaruhi kondisi perjalanan dan pengalaman pengguna saat bersepeda?
+            plt.style.use('dark_background')
+            st.header("Cuaca dan Pengguna Sepeda")
+            st.write("Grafik persewaan sepeda berdasarkan cuaca")
+            fig, ax = plt.subplots(figsize=(20, 10))
+            sns.barplot(x="weathersit", y="cnt", data=df, color='blue')
+            ax.set_xlabel("wcuaca")
+            ax.set_ylabel("Total Penyewa")
+            ax.set_title("Grafik Persewaan Sepeda Berdasarkan Cuaca")
+            st.pyplot(fig)
+
+            # Data urut terbanyak penyewa berdasarkan weathersit
+            st.write("Data Urut Terbanyak Penyewa Berdasarkan Cuaca")
+            st.write(df.groupby(by="weathersit").nunique().sort_values(by='cnt', ascending=False))
+
+            # Data urut terkecil penyewa berdasarkan weathersit
+            st.write("Data Urut Terkecil Penyewa Berdasarkan Cuaca")
+            st.write(df.groupby(by="weathersit").nunique().sort_values(by='cnt', ascending=True))
+
+elif nav_choice == "Tambahan":
+            st.header("Analisis Data")
+            st.write(df)
+            
+            # menampilkan data berdasarkan yr, mnth, season, weathersit, hum, temp, atemp, dan windspeed
+            st.write("Data Berdasarkan Tahun (yr):")
+            st.write(df.groupby('yr')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Bulan (mnth):")
+            st.write(df.groupby('mnth')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Musim (season):")
+            st.write(df.groupby('season')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Cuaca (weathersit):")
+            st.write(df.groupby('weathersit')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Kelembaban (hum):")
+            st.write(df.groupby('hum')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Suhu (temp):")
+            st.write(df.groupby('temp')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Suhu Terasa (atemp):")
+            st.write(df.groupby('atemp')[['cnt', 'registered', 'casual']].sum())
+
+            st.write("Data Berdasarkan Kecepatan Angin (windspeed):")
+            st.write(df.groupby('windspeed')[['cnt', 'registered', 'casual']].sum())
